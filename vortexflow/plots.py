@@ -86,3 +86,28 @@ def plot_case(case_directory: str | Path) -> list[Path]:
         plt.close(fig)
         created.append(target)
     return created
+
+
+def plot_optimization(output_directory: str | Path, metrics_csv: str | Path) -> Path:
+    output = Path(output_directory)
+    curve = np.genfromtxt(output / "response_curves.csv", delimiter=",", names=True)
+    with Path(metrics_csv).open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    with (output / "optimization_summary.json").open(encoding="utf-8") as handle:
+        summary = json.load(handle)
+    x = np.asarray([float(row["side_radius_mm"]) for row in rows])
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.plot(curve["side_radius_mm"], curve["lagrange"], label="Lagrange", alpha=0.75)
+    ax.plot(curve["side_radius_mm"], curve["newton"], "--", label="Newton interpolation")
+    ax.plot(curve["side_radius_mm"], curve["spline"], label="Natural spline")
+    ax.plot(curve["side_radius_mm"], curve["qr_polynomial"], linewidth=2, label="QR fit")
+    ax.axvline(summary["golden_section"]["x_mm"], color="black", linestyle=":", label="Golden optimum")
+    ax.set_xlabel("Side radius (mm)")
+    ax.set_ylabel("Normalized objective")
+    ax.grid(alpha=0.3)
+    ax.legend()
+    fig.tight_layout()
+    target = output / "optimization.png"
+    _save_figure(fig, target)
+    plt.close(fig)
+    return target
